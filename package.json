@@ -5,12 +5,12 @@
   "description": "SIGNAL — multi-source live news monitoring desktop application",
   "main": "main.js",
   "scripts": {
-    "start": "electron .",
-    "dist:win": "electron-builder --win nsis portable --x64",
-    "dist:installer": "electron-builder --win nsis --x64",
-    "dist:portable": "electron-builder --win portable --x64",
-    "pack:win": "electron-builder --win dir --x64"
-  },
+  "start": "electron .",
+  "dist:win": "electron-builder --win nsis portable --x64 --publish never",
+  "dist:installer": "electron-builder --win nsis --x64 --publish never",
+  "dist:portable": "electron-builder --win portable --x64 --publish never",
+  "pack:win": "electron-builder --win dir --x64 --publish never"
+},
   "devDependencies": {
     "electron": "44.3.0",
     "electron-builder": "26.17.0"
