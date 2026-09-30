@@ -1,0 +1,15 @@
+SIGNAL 1.0.0 - Third Party Notices
+
+Electron
+Copyright OpenJS Foundation and other contributors.
+MIT License. https://www.electronjs.org/
+
+@ghostery/adblocker-electron 2.18.2
+Copyright Ghostery GmbH and contributors.
+MPL-2.0. https://github.com/ghostery/adblocker
+
+ws
+Copyright Einar Otto Stangvik and contributors.
+MIT License. https://github.com/websockets/ws
+
+SIGNAL also connects to public external services, including P2P地震情報, GDELT, Google News RSS, Radio Browser, YouTube and broadcaster websites. Their services and content remain subject to their respective terms and availability.

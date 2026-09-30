@@ -1,0 +1,29 @@
+SIGNAL 1.0.0 — GitHub repository upload
+
+Repository:
+  katsuki06/SIGNAL
+
+This package is already arranged as the repository root.
+
+Recommended upload method:
+1. Clone katsuki06/SIGNAL using GitHub Desktop or git.
+2. Replace/add the contents of the cloned folder with everything in this package.
+3. Commit with:
+     Prepare SIGNAL 1.0.0 release
+4. Push to main.
+
+After pushing:
+1. Open the SIGNAL repository on GitHub.
+2. Open Actions.
+3. Select "Build & Publish SIGNAL 1.0.0".
+4. Click "Run workflow".
+5. Wait for the green check.
+6. Open Releases.
+7. SIGNAL 1.0.0 / tag v1.0.0 will contain:
+     SIGNAL Setup 1.0.0.exe
+     SIGNAL Portable 1.0.0.exe
+     SHA256SUMS.txt
+     README.txt
+     THIRD_PARTY_NOTICES.txt
+
+For Discord, share the GitHub Release page instead of uploading the EXE/ZIP directly.

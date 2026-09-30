@@ -1,0 +1,1745 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SIGNAL v1.0.0</title>
+<style>
+:root{
+  --bg:#050608;--panel:#090b0f;--line:#28303a;--text:#edf2f7;
+  --muted:#7e8997;--red:#ff3f3f;--green:#44e895;--cyan:#69d9ff;
+  --amber:#f4c96b;
+}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);
+font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
+body{display:grid;grid-template-rows:44px 36px 104px minmax(0,1fr) 32px}
+
+header{display:flex;align-items:center;border-bottom:1px solid var(--line);padding:0 14px;background:#07090c}
+.brand{font-weight:900;letter-spacing:.09em}.ver{font:700 9px ui-monospace;color:var(--muted);margin-left:12px}
+.live{display:flex;gap:7px;align-items:center;font:800 9px ui-monospace;margin-left:18px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--red);box-shadow:0 0 10px var(--red)}
+.spacer{flex:1}.utc{font:700 10px ui-monospace}
+.mode-readout{font:800 9px ui-monospace;color:var(--cyan);margin-right:16px;letter-spacing:.08em}
+
+.modebar{
+  min-width:0;
+  height:36px;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  padding:0 9px;
+  background:#0a0d11;
+  border-bottom:1px solid var(--line);
+  overflow:hidden;
+  white-space:nowrap;
+}
+.modebar-main{
+  min-width:0;
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+.modebar-spacer{flex:1}
+.top-status{
+  flex:0 0 auto;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  padding-left:8px;
+  border-left:1px solid #26303a;
+  font:850 7px ui-monospace;
+  letter-spacing:.05em;
+  color:#74818d;
+}
+.top-status-dot{
+  width:6px;
+  height:6px;
+  border-radius:50%;
+  background:#626d77;
+}
+.top-status.good .top-status-dot{
+  background:#59dc8c;
+  box-shadow:0 0 7px rgba(89,220,140,.52);
+}
+.top-status.warn .top-status-dot{background:#e3ba68}
+.top-status.err .top-status-dot{background:#ff6871}
+.control-proxies{display:none!important}
+
+.mode-label{font:800 8px ui-monospace;color:#697684;letter-spacing:.12em;margin-right:2px}
+.mode-btn,.tool-btn,.modebar select{
+  height:24px;border:1px solid #343e49;background:#10151b;color:#bec8d3;
+  font:800 8px ui-monospace;letter-spacing:.07em;padding:0 8px;cursor:pointer
+}
+.mode-btn:hover,.tool-btn:hover,.modebar select:hover{border-color:#6e8094;color:#fff}
+.mode-btn.active{border-color:#5c9abd;background:#0d1b24;color:#dff5ff;box-shadow:inset 0 -2px 0 #66d8ff}
+.tool-btn.active{border-color:#b99a55;color:#ffe3a0}
+.modebar select{outline:none}
+.mode-sep{width:1px;height:18px;background:#28313b;margin:0 3px}
+.toggle{display:flex;align-items:center;gap:5px;font:700 8px ui-monospace;color:#8793a0}
+.toggle input{accent-color:#70d8ff}
+.countdown{font:800 8px ui-monospace;color:#83909e;min-width:66px}
+
+.clocks{display:grid;grid-template-columns:repeat(12,minmax(120px,1fr));overflow:hidden;border-bottom:1px solid var(--line)}
+.clock{padding:10px 9px;border-right:1px solid #1d232b;background:#07090c}
+.clock-country{font:800 8px ui-monospace;color:#778392;white-space:nowrap}
+.clock-city{font-size:10px;font-weight:800;margin-top:3px}
+.clock-time{font:800 17px ui-monospace;margin-top:5px}
+.clock-zone{font:600 8px ui-monospace;color:#65707d;margin-top:3px}
+
+.grid{
+  min-height:0;
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:center;
+  align-content:center;
+  align-items:center;
+  gap:7px;
+  padding:7px;
+  background:#030405;
+  overflow:hidden;
+}
+.tile{
+  position:relative;
+  flex:0 0 auto;
+  width:var(--tile-w,420px);
+  height:var(--tile-h,236px);
+  aspect-ratio:16 / 9;
+  min-width:0;min-height:0;
+  border:1px solid #242c36;
+  background:#000;
+  overflow:hidden;
+  transition:border-color .18s,box-shadow .18s,transform .18s
+}
+.tile.focused{position:fixed;z-index:100;inset:80px 0 32px 0;border:0;width:auto!important;height:auto!important;aspect-ratio:auto!important}
+.tile.audio-active{border-color:#4a869f;box-shadow:inset 0 0 0 1px rgba(105,217,255,.12)}
+.tile.newsroom-lead{
+  border-color:#f0c75e;box-shadow:0 0 18px rgba(240,199,94,.22),inset 0 0 0 1px rgba(240,199,94,.25);
+  transform:scale(.995)
+}
+.tile.newsroom-bg{border-color:#596a7c}
+.tile.scan-active{border-color:#67d9ff;box-shadow:0 0 14px rgba(103,217,255,.18)}
+webview{display:flex;width:100%;height:100%;background:#000}
+.overlay-top{
+  position:absolute;z-index:5;left:0;right:0;top:0;height:28px;display:flex;align-items:center;gap:6px;
+  padding:0 7px;background:linear-gradient(180deg,rgba(0,0,0,.86),rgba(0,0,0,.25));pointer-events:none
+}
+.flag{font-size:12px}.code{font:900 9px ui-monospace}.station{font:700 9px ui-monospace;color:#dbe2ea;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.overlay-top .spacer{flex:1}
+.status{font:800 8px ui-monospace;color:#9aa5b2;white-space:nowrap}.status.ok{color:var(--green)}.status.warn{color:var(--amber)}.status.recover{color:var(--cyan)}.status.err{color:#ff6a6a}
+.audio-badge{display:none;font:900 8px ui-monospace;color:#071014;background:#72ddff;padding:2px 4px;margin-left:2px}
+.tile.audio-active .audio-badge{display:inline-block}
+.controls{position:absolute;z-index:8;right:6px;bottom:6px;display:flex;gap:4px}
+.controls button,.controls a{
+  height:24px;padding:0 7px;border:1px solid #35404c;background:rgba(8,11,15,.88);color:#dce4ec;
+  font:800 8px ui-monospace;text-decoration:none;display:flex;align-items:center;cursor:pointer
+}
+.controls button:hover,.controls a:hover{border-color:#77899d}
+.controls button.audio-on{border-color:#60bada;color:#dff8ff;background:#10232c}
+.tile-time{position:absolute;z-index:5;left:7px;bottom:8px;font:800 9px ui-monospace;text-shadow:0 1px 4px #000;pointer-events:none}
+
+.notice{position:absolute;inset:0;z-index:7;display:none;place-items:center;text-align:center;background:#080a0d;padding:20px}
+.notice.show{display:grid}
+.notice strong{display:block;font:900 10px ui-monospace;color:#ff7373;letter-spacing:.08em}
+.notice span{display:block;font-size:9px;color:#8994a1;margin-top:7px;line-height:1.5}
+
+.mixer{
+  position:fixed;z-index:150;right:12px;top:88px;width:365px;
+  background:rgba(8,11,15,.97);border:1px solid #36424e;box-shadow:0 18px 70px rgba(0,0,0,.55);
+  display:none
+}
+.mixer.open{display:block}
+.mixer-head{height:34px;display:flex;align-items:center;padding:0 10px;border-bottom:1px solid #29323d}
+.mixer-title{font:900 9px ui-monospace;letter-spacing:.1em}
+.mixer-mode{font:700 8px ui-monospace;color:#6f7d8b;margin-left:8px}
+.mixer-close{margin-left:auto;border:0;background:transparent;color:#8b98a6;cursor:pointer;font-size:15px}
+.mixer-list{padding:7px 9px 9px}
+.mix-empty{padding:16px 4px;text-align:center;font:700 9px ui-monospace;color:#667381}
+.mix-row{padding:8px 0;border-bottom:1px solid #202730}
+.mix-row:last-child{border-bottom:0}
+.mix-top{display:flex;align-items:center;gap:7px}
+.mix-name{font:800 9px ui-monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.mix-role{font:900 7px ui-monospace;color:#f3d57e;border:1px solid #5d5132;padding:2px 4px}
+.mix-remove{border:1px solid #35404c;background:#10151b;color:#98a4b0;font:800 8px ui-monospace;cursor:pointer}
+.mix-control{display:grid;grid-template-columns:1fr 38px;gap:7px;align-items:center;margin-top:6px}
+.mix-control input{width:100%;accent-color:#6edcff}
+.mix-vol{font:800 8px ui-monospace;color:#aab5c0;text-align:right}
+.mixer-note{padding:8px 10px;border-top:1px solid #29323d;color:#64717e;font:700 8px/1.45 ui-monospace}
+
+.toast{
+  position:fixed;z-index:300;left:50%;bottom:45px;transform:translate(-50%,10px);
+  border:1px solid #3d4854;background:#10151b;color:#dbe5ee;padding:7px 10px;
+  font:800 8px ui-monospace;opacity:0;transition:.2s;pointer-events:none
+}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+
+footer{display:flex;align-items:center;overflow:hidden;border-top:1px solid var(--line);background:#07090c}
+.ticker-tag{height:100%;display:flex;align-items:center;padding:0 12px;background:#bb2323;font:900 8px ui-monospace;letter-spacing:.1em}
+.ticker{white-space:nowrap;overflow:hidden;flex:1}
+.ticker-inner{display:inline-block;padding-left:100%;font:700 9px ui-monospace;color:#aeb8c4;animation:move 44s linear infinite}
+.ticker-inner span{margin-right:48px}.ticker-inner b{color:#fff}
+@keyframes move{to{transform:translateX(-100%)}}
+
+@media(max-width:1200px){
+  .modebar{gap:4px;padding:0 6px}
+  .modebar-main{gap:4px}
+  .tool-btn,.preset-select{padding:0 6px;font-size:7px}
+  .top-status{font-size:6px}
+  .clocks{overflow-x:auto}.clock{min-width:120px}
+}
+  .mode-btn,.tool-btn,.modebar select{padding:0 5px;font-size:7px}
+  .toggle{font-size:7px}
+  .layout-readout{min-width:0;font-size:7px}
+}
+
+.health-summary{
+  display:flex;align-items:center;gap:9px;margin-right:14px;
+  font:800 8px ui-monospace;letter-spacing:.05em;color:#8090a0
+}
+.health-summary b{font-weight:900}
+.health-live{color:var(--green)}.health-buffer{color:var(--amber)}
+.health-recover{color:var(--cyan)}.health-offline{color:#ff6a6a}
+.tile.health-stalled{border-color:#b98b45}
+.tile.health-reconnecting{border-color:#4f9fc2;box-shadow:inset 0 0 0 1px rgba(103,217,255,.15)}
+.tile.health-offline{border-color:#744047}
+
+
+.clean-stat{
+  font:800 8px ui-monospace;color:#748391;white-space:nowrap;min-width:76px
+}
+.clean-stat strong{color:#bfeeff}
+.clean-engine{
+  font:800 8px ui-monospace;color:#788694;white-space:nowrap;min-width:94px
+}
+.clean-engine.ready{color:var(--green)}
+.clean-engine.loading{color:var(--amber)}
+.clean-engine.fallback{color:var(--cyan)}
+.clean-engine.error{color:#ff6a6a}
+.clean-select{
+  height:24px;border:1px solid #38505d;background:#0d171d;color:#dcf5ff;
+  font:900 8px ui-monospace;letter-spacing:.07em;padding:0 7px;outline:none
+}
+.clean-select.strict{border-color:#a66b45;color:#ffd3aa;background:#1b120d}
+.clean-select.off{border-color:#484f58;color:#929da8;background:#101317}
+
+
+.preset-select{
+  height:24px;border:1px solid #40505e;background:#0e151b;color:#dce7f0;
+  font:900 8px ui-monospace;letter-spacing:.07em;padding:0 7px;outline:none
+}
+.source-manager{
+  position:fixed;z-index:500;inset:0;background:rgba(2,3,5,.88);
+  display:none;align-items:center;justify-content:center;padding:28px
+}
+.source-manager.open{display:flex}
+.manager-panel{
+  width:min(1120px,96vw);max-height:90vh;background:#090c10;border:1px solid #3a4652;
+  box-shadow:0 28px 100px rgba(0,0,0,.7);display:grid;grid-template-rows:42px minmax(0,1fr) 52px
+}
+.manager-head{
+  display:flex;align-items:center;padding:0 12px;border-bottom:1px solid #29323b
+}
+.manager-title{font:900 11px ui-monospace;letter-spacing:.1em}
+.manager-sub{font:700 8px ui-monospace;color:#6f7c89;margin-left:12px}
+.manager-close{
+  margin-left:auto;border:1px solid #3b4652;background:#11161c;color:#cbd4dd;
+  width:28px;height:26px;cursor:pointer
+}
+.manager-body{min-height:0;overflow:auto;padding:12px;display:grid;grid-template-columns:minmax(0,1.5fr) minmax(300px,.8fr);gap:14px}
+.manager-section{border:1px solid #242d36;background:#0b0f14}
+.manager-section-head{
+  height:30px;display:flex;align-items:center;padding:0 9px;border-bottom:1px solid #232b34;
+  font:900 8px ui-monospace;letter-spacing:.1em;color:#96a4b2
+}
+.slot-list{padding:7px}
+.slot-row{
+  display:grid;grid-template-columns:58px minmax(0,1fr) 110px;gap:7px;align-items:center;
+  min-height:34px;padding:4px 0;border-bottom:1px solid #171d24
+}
+.slot-row:last-child{border-bottom:0}
+.slot-num{font:900 8px ui-monospace;color:#657381}
+.slot-row select{
+  width:100%;height:26px;border:1px solid #33404c;background:#0e141a;color:#dce5ed;
+  font:700 9px ui-monospace;padding:0 6px;outline:none
+}
+.slot-preview{
+  font:700 8px ui-monospace;color:#73808d;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap
+}
+.custom-form{padding:10px;display:grid;gap:8px}
+.custom-form label{font:800 8px ui-monospace;color:#71808e}
+.custom-form input{
+  width:100%;height:28px;border:1px solid #33404c;background:#0d1218;color:#e1e9f0;
+  padding:0 7px;font:700 9px ui-monospace;outline:none
+}
+.custom-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.manager-btn{
+  height:29px;border:1px solid #40505d;background:#111820;color:#dce7f0;
+  font:900 8px ui-monospace;letter-spacing:.07em;cursor:pointer;padding:0 10px
+}
+.manager-btn:hover{border-color:#71869a}
+.manager-btn.primary{border-color:#4d7a90;background:#10202a;color:#e0f7ff}
+.manager-btn.danger{border-color:#684248;color:#ffc7ca}
+.custom-list{padding:0 10px 10px}
+.custom-item{
+  display:grid;grid-template-columns:1fr auto;gap:6px;padding:7px 0;border-top:1px solid #1e252d
+}
+.custom-item-name{font:800 8px ui-monospace;color:#c5d0da}
+.custom-item-url{font:650 7px ui-monospace;color:#667482;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.manager-foot{
+  display:flex;align-items:center;gap:7px;padding:0 12px;border-top:1px solid #29323b
+}
+.manager-foot-note{font:700 8px ui-monospace;color:#667583}
+.manager-foot .spacer{flex:1}
+.preset-note{
+  padding:9px 10px;font:650 8px/1.5 ui-monospace;color:#71808d;border-top:1px solid #202832
+}
+
+
+.layout-readout{
+  font:800 8px ui-monospace;color:#7f8d9a;white-space:nowrap;min-width:78px
+}
+.layout-readout strong{color:#d9e6f0}
+
+.headlines-panel{
+  position:fixed;z-index:420;right:10px;top:86px;bottom:42px;width:min(410px,38vw);
+  background:rgba(7,10,14,.98);border:1px solid #36424e;
+  box-shadow:0 22px 80px rgba(0,0,0,.6);
+  display:none;grid-template-rows:38px 36px minmax(0,1fr) 32px
+}
+.headlines-panel.open{display:grid}
+.headlines-head{
+  display:flex;align-items:center;padding:0 10px;border-bottom:1px solid #27313a
+}
+.headlines-title{font:900 10px ui-monospace;letter-spacing:.1em}
+.headlines-source{font:700 8px ui-monospace;color:#6e7b88;margin-left:8px}
+.headlines-close{
+  margin-left:auto;border:1px solid #3a4651;background:#11171d;color:#bdc7d1;
+  width:26px;height:24px;cursor:pointer
+}
+.headlines-tools{
+  display:flex;align-items:center;gap:6px;padding:0 8px;border-bottom:1px solid #222a33
+}
+.headlines-tools select{
+  height:24px;border:1px solid #35414d;background:#0d141a;color:#dce6ee;
+  font:800 8px ui-monospace;padding:0 6px;outline:none
+}
+.headlines-refresh{
+  height:24px;border:1px solid #35414d;background:#11171d;color:#d6e0e9;
+  font:800 8px ui-monospace;cursor:pointer
+}
+.headlines-list{min-height:0;overflow:auto;padding:4px 9px 9px}
+.headline-item{
+  padding:9px 0;border-bottom:1px solid #1c232b;cursor:pointer
+}
+.headline-item:hover .headline-title{color:#fff}
+.headline-meta{
+  display:flex;gap:7px;align-items:center;
+  font:700 7px ui-monospace;color:#697784;margin-bottom:4px
+}
+.headline-title{
+  font-size:10px;line-height:1.4;color:#c8d1da
+}
+.headline-domain{color:#7fa4b7}
+.headlines-foot{
+  display:flex;align-items:center;padding:0 9px;border-top:1px solid #27313a;
+  font:700 8px ui-monospace;color:#65727f
+}
+.headlines-state{margin-left:auto;color:#8b9aa8}
+.grid.compact .controls button,.grid.compact .controls a{
+  padding:0 5px;font-size:7px
+}
+.grid.compact .station{font-size:8px}
+
+
+.headlines-state.ok{color:var(--green)}
+.headlines-state.warn{color:var(--amber)}
+.headlines-state.err{color:#ff6a6a}
+.headlines-state.cache{color:var(--cyan)}
+.headlines-statusline{
+  padding:7px 9px 2px;
+  font:700 8px/1.35 ui-monospace;
+  color:#6f7e8c;
+}
+.headlines-retry{
+  margin-top:8px;
+  height:26px;
+  border:1px solid #455463;
+  background:#11181f;
+  color:#d8e3ec;
+  font:800 8px ui-monospace;
+  cursor:pointer
+}
+
+
+.headlines-region{
+  height:24px;display:flex;align-items:center;padding:0 8px;
+  border:1px solid #35414d;background:#0d141a;color:#dce6ee;
+  font:900 8px ui-monospace;letter-spacing:.08em;
+}
+
+
+.radio-panel{
+  position:fixed;z-index:430;left:10px;top:86px;bottom:42px;width:min(430px,40vw);
+  background:rgba(7,10,14,.985);border:1px solid #36424e;
+  box-shadow:0 22px 80px rgba(0,0,0,.62);
+  display:none;grid-template-rows:38px auto auto minmax(0,1fr) auto
+}
+.radio-panel.open{display:grid}
+.radio-head{
+  display:flex;align-items:center;padding:0 10px;border-bottom:1px solid #27313a
+}
+.radio-title{font:900 10px ui-monospace;letter-spacing:.1em}
+.radio-source{font:700 8px ui-monospace;color:#6e7b88;margin-left:8px}
+.radio-close{
+  margin-left:auto;border:1px solid #3a4651;background:#11171d;color:#bdc7d1;
+  width:26px;height:24px;cursor:pointer
+}
+.radio-quick{
+  display:flex;gap:5px;flex-wrap:wrap;padding:7px 8px;border-bottom:1px solid #202832
+}
+.radio-chip{
+  height:23px;border:1px solid #34424e;background:#0d141a;color:#9caab6;
+  font:800 7px ui-monospace;cursor:pointer;padding:0 7px
+}
+.radio-chip:hover{border-color:#6b8498;color:#fff}
+.radio-search{
+  display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;padding:7px 8px;
+  border-bottom:1px solid #202832
+}
+.radio-search input,.radio-direct input{
+  min-width:0;height:28px;border:1px solid #34414d;background:#0c1218;color:#e0e8ef;
+  padding:0 8px;font:700 9px ui-monospace;outline:none
+}
+.radio-search button,.radio-direct button,.radio-player button{
+  height:28px;border:1px solid #40505d;background:#111820;color:#dce7f0;
+  font:900 8px ui-monospace;cursor:pointer;padding:0 10px
+}
+.radio-results{min-height:0;overflow:auto;padding:4px 8px}
+.radio-empty{padding:18px 8px;text-align:center;font:800 8px/1.6 ui-monospace;color:#667583}
+.radio-result{
+  display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;
+  padding:8px 2px;border-bottom:1px solid #1d252d
+}
+.radio-name{font:850 9px ui-monospace;color:#cad5df;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.radio-meta{font:700 7px ui-monospace;color:#6e7d8a;margin-top:4px}
+.radio-play{
+  align-self:center;height:26px;border:1px solid #3f6272;background:#0f1c23;color:#cff4ff;
+  font:900 8px ui-monospace;cursor:pointer;padding:0 9px
+}
+.radio-bottom{border-top:1px solid #29323b;background:#080c10}
+.radio-player{
+  display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:7px;align-items:center;padding:8px
+}
+.radio-status-dot{
+  width:8px;height:8px;border-radius:50%;background:#5b6570;box-shadow:0 0 0 2px rgba(255,255,255,.03)
+}
+.radio-status-dot.live{background:#54d384;box-shadow:0 0 10px rgba(84,211,132,.6)}
+.radio-status-dot.wait{background:#e2b35d}
+.radio-status-dot.err{background:#ff656d}
+.radio-now-name{font:900 8px ui-monospace;color:#dbe6ef;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.radio-now-meta{font:700 7px ui-monospace;color:#6e7d89;margin-top:3px}
+.radio-controls{
+  display:flex;align-items:center;gap:6px;padding:0 8px 8px
+}
+.radio-controls input[type="range"]{flex:1;accent-color:#76c9e8}
+.radio-volume{width:40px;text-align:right;font:800 8px ui-monospace;color:#8495a3}
+.radio-direct{
+  display:grid;grid-template-columns:.7fr 1.5fr auto;gap:5px;padding:0 8px 8px
+}
+.radio-direct-label{
+  padding:7px 8px 5px;font:800 7px ui-monospace;letter-spacing:.08em;color:#657582
+}
+.radio-state{
+  font:900 7px ui-monospace;color:#8594a1;min-width:62px;text-align:right
+}
+.radio-state.live{color:#54d384}
+.radio-state.wait{color:#e2b35d}
+.radio-state.err{color:#ff747b}
+
+
+.alert-btn.active{
+  border-color:#8f3239!important;
+  background:#251013!important;
+  color:#ffb8bd!important;
+}
+.alert-strip{
+  position:fixed;
+  z-index:360;
+  left:0;
+  right:0;
+  top:80px;
+  height:30px;
+  display:none;
+  align-items:center;
+  gap:10px;
+  padding:0 11px;
+  background:linear-gradient(90deg,rgba(82,7,12,.98),rgba(45,8,11,.97));
+  border-top:1px solid #8d252d;
+  border-bottom:1px solid #8d252d;
+  box-shadow:0 7px 22px rgba(0,0,0,.38);
+  font-family:ui-monospace;
+}
+.alert-strip.show{display:flex}
+.alert-strip-label{
+  font-size:8px;
+  font-weight:1000;
+  letter-spacing:.13em;
+  color:#fff;
+  background:#b20e1b;
+  padding:4px 6px;
+}
+.alert-strip-region{
+  font-size:8px;
+  font-weight:900;
+  color:#efadb1;
+}
+.alert-strip-topic{
+  min-width:0;
+  flex:1;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-size:9px;
+  font-weight:900;
+  color:#fff;
+}
+.alert-strip-meta{
+  font-size:7px;
+  font-weight:800;
+  color:#cb9297;
+  white-space:nowrap;
+}
+.alert-strip-close{
+  border:0;
+  background:transparent;
+  color:#d8a8ab;
+  cursor:pointer;
+  font-size:14px;
+}
+.alert-panel{
+  position:fixed;
+  z-index:440;
+  right:10px;
+  top:86px;
+  bottom:42px;
+  width:min(420px,39vw);
+  display:none;
+  grid-template-rows:38px auto minmax(0,1fr) 34px;
+  background:rgba(8,9,12,.985);
+  border:1px solid #3c4148;
+  box-shadow:0 22px 80px rgba(0,0,0,.62);
+}
+.alert-panel.open{display:grid}
+.alert-head{
+  display:flex;
+  align-items:center;
+  padding:0 10px;
+  border-bottom:1px solid #292d33;
+}
+.alert-title{
+  font:900 10px ui-monospace;
+  letter-spacing:.1em;
+}
+.alert-sub{
+  margin-left:8px;
+  font:700 8px ui-monospace;
+  color:#777f88;
+}
+.alert-close{
+  margin-left:auto;
+  width:26px;
+  height:24px;
+  border:1px solid #3a4651;
+  background:#11171d;
+  color:#bdc7d1;
+  cursor:pointer;
+}
+.alert-info{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:7px 9px;
+  border-bottom:1px solid #20252b;
+  font:800 7px ui-monospace;
+  color:#747f89;
+}
+.alert-info strong{color:#cfd7df}
+.alert-list{
+  min-height:0;
+  overflow:auto;
+  padding:5px 9px 10px;
+}
+.alert-card{
+  padding:9px 3px 10px;
+  border-bottom:1px solid #20252b;
+}
+.alert-card-top{
+  display:flex;
+  gap:7px;
+  align-items:center;
+  margin-bottom:6px;
+}
+.alert-level{
+  font:1000 7px ui-monospace;
+  letter-spacing:.09em;
+  padding:3px 5px;
+  border:1px solid #63323a;
+  color:#f0a8ae;
+  background:#1c0e11;
+}
+.alert-level.breaking{
+  border-color:#a12631;
+  color:#ffd8dc;
+  background:#310c11;
+}
+.alert-topic{
+  font:900 10px/1.35 ui-monospace;
+  color:#e4e9ee;
+}
+.alert-card-meta{
+  margin-top:5px;
+  font:750 7px/1.4 ui-monospace;
+  color:#71808c;
+}
+.alert-card-sources{
+  margin-top:5px;
+  font:700 7px/1.4 ui-monospace;
+  color:#8997a4;
+}
+.alert-empty{
+  padding:24px 8px;
+  text-align:center;
+  font:800 8px/1.6 ui-monospace;
+  color:#64717d;
+}
+.alert-foot{
+  display:flex;
+  align-items:center;
+  padding:0 9px;
+  border-top:1px solid #292d33;
+  font:750 7px ui-monospace;
+  color:#6f7b86;
+}
+.alert-foot-state{
+  margin-left:auto;
+}
+
+
+.emergency-watch-on{
+  border-color:#7d2d35!important;
+  color:#ffd4d7!important;
+  background:#241014!important;
+}
+.emergency-conn{
+  min-width:78px;
+  font:900 7px ui-monospace;
+  color:#9ba7b2;
+  white-space:nowrap;
+}
+.emergency-conn.live{color:#6ee39a}
+.emergency-conn.wait{color:#e4bb69}
+.emergency-conn.error{color:#ff737a}
+
+.emergency-banner{
+  display:none;
+  min-width:0;
+  align-items:center;
+  gap:10px;
+  padding:0 12px;
+  background:linear-gradient(90deg,#930d18,#48080e 58%,#19070a);
+  border-top:1px solid #d12a37;
+  border-bottom:1px solid #d12a37;
+  box-shadow:inset 0 0 28px rgba(255,40,55,.10);
+  overflow:hidden;
+}
+body.emergency-active{
+  grid-template-rows:44px 36px 48px 104px minmax(0,1fr) 32px;
+}
+body.emergency-active .emergency-banner{display:flex}
+.emergency-kicker{
+  flex:0 0 auto;
+  padding:5px 7px;
+  border:1px solid rgba(255,255,255,.36);
+  font:1000 8px ui-monospace;
+  letter-spacing:.12em;
+  color:#fff;
+}
+.emergency-region{
+  flex:0 0 auto;
+  font:1000 10px ui-monospace;
+  color:#ffd5d8;
+}
+.emergency-main{
+  min-width:0;
+  flex:1;
+}
+.emergency-title{
+  font:1000 10px ui-monospace;
+  color:#fff;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.emergency-detail{
+  margin-top:3px;
+  font:750 7px ui-monospace;
+  color:#eeb9bd;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.emergency-source{
+  flex:0 0 auto;
+  max-width:200px;
+  text-align:right;
+  font:700 7px/1.35 ui-monospace;
+  color:#d39fa4;
+}
+.emergency-return{
+  flex:0 0 auto;
+  height:28px;
+  border:1px solid #f2b8bd;
+  background:#fff;
+  color:#54090f;
+  padding:0 10px;
+  cursor:pointer;
+  font:1000 8px ui-monospace;
+}
+
+
+/* ==========================================================
+   CINEMA MODE
+   ========================================================== */
+
+.cinema-exit{
+  position:fixed;
+  z-index:1000;
+  right:10px;
+  top:10px;
+  height:28px;
+  border:1px solid rgba(220,230,240,.35);
+  background:rgba(7,10,14,.86);
+  color:#d8e2ea;
+  padding:0 10px;
+  font:900 8px ui-monospace;
+  letter-spacing:.08em;
+  cursor:pointer;
+  opacity:0;
+  pointer-events:none;
+  transform:translateY(-6px);
+  transition:opacity .18s ease,transform .18s ease;
+}
+body.cinema-mode.cinema-ui-visible .cinema-exit{
+  opacity:1;
+  pointer-events:auto;
+  transform:translateY(0);
+}
+body.cinema-mode.emergency-active .cinema-exit{
+  top:56px;
+}
+
+/* In cinema mode only the monitoring wall remains:
+   clocks + video wall + ticker. Emergency and breaking overlays stay available. */
+body.cinema-mode{
+  grid-template-rows:104px minmax(0,1fr) 32px;
+  cursor:none;
+  background:#000;
+}
+body.cinema-mode.cinema-ui-visible{
+  cursor:default;
+}
+body.cinema-mode > header,
+body.cinema-mode > .modebar{
+  display:none!important;
+}
+body.cinema-mode .clocks{
+  grid-row:auto;
+  background:#040506;
+}
+body.cinema-mode .grid{
+  grid-row:auto;
+  padding:4px;
+  gap:4px;
+  background:#000;
+}
+body.cinema-mode footer{
+  grid-row:auto;
+}
+
+/* Emergency banner is a real row even in cinema mode. */
+body.cinema-mode.emergency-active{
+  grid-template-rows:48px 104px minmax(0,1fr) 32px;
+}
+body.cinema-mode.emergency-active .emergency-banner{
+  display:flex!important;
+}
+
+/* Player chrome is hidden, station/status labels stay visible. */
+body.cinema-mode .controls{
+  display:none!important;
+}
+body.cinema-mode .tile-time{
+  display:none!important;
+}
+body.cinema-mode .overlay-top{
+  height:24px;
+  padding:0 6px;
+  background:linear-gradient(180deg,rgba(0,0,0,.76),rgba(0,0,0,.10));
+}
+body.cinema-mode .station{
+  font-size:8px;
+}
+body.cinema-mode .status{
+  font-size:7px;
+}
+
+/* Side panels should never obscure the wall in cinema mode. */
+body.cinema-mode .mixer,
+body.cinema-mode .source-manager,
+body.cinema-mode .headlines-panel,
+body.cinema-mode .radio-panel,
+body.cinema-mode .alert-panel{
+  display:none!important;
+}
+
+/* BREAKING SIGNAL remains visible at the top of the wall. */
+body.cinema-mode .alert-strip{
+  top:0;
+}
+body.cinema-mode.emergency-active .alert-strip{
+  top:48px;
+}
+
+/* Focus mode may cover clocks; keep ticker visible. */
+body.cinema-mode .tile.focused{
+  inset:0 0 32px 0!important;
+}
+body.cinema-mode.emergency-active .tile.focused{
+  inset:48px 0 32px 0!important;
+}
+
+
+/* ==========================================================
+   SETTINGS
+   ========================================================== */
+.settings-overlay{
+  position:fixed;
+  z-index:720;
+  inset:0;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+  background:rgba(2,3,5,.88);
+}
+.settings-overlay.open{display:flex}
+.settings-shell{
+  width:min(1080px,96vw);
+  height:min(760px,92vh);
+  min-height:560px;
+  display:grid;
+  grid-template-columns:210px minmax(0,1fr);
+  grid-template-rows:44px minmax(0,1fr) 48px;
+  background:#080b0f;
+  border:1px solid #394550;
+  box-shadow:0 30px 110px rgba(0,0,0,.72);
+}
+.settings-head{
+  grid-column:1 / -1;
+  display:flex;
+  align-items:center;
+  padding:0 13px;
+  border-bottom:1px solid #29313a;
+  background:#0a0e13;
+}
+.settings-title{
+  font:1000 11px ui-monospace;
+  letter-spacing:.11em;
+}
+.settings-version{
+  margin-left:10px;
+  font:750 8px ui-monospace;
+  color:#64717d;
+}
+.settings-close{
+  margin-left:auto;
+  width:28px;
+  height:26px;
+  border:1px solid #3b4652;
+  background:#11161c;
+  color:#cbd4dd;
+  cursor:pointer;
+}
+.settings-tabs{
+  min-height:0;
+  overflow:auto;
+  border-right:1px solid #29313a;
+  background:#070a0e;
+  padding:8px;
+}
+.settings-tab{
+  width:100%;
+  height:34px;
+  margin-bottom:4px;
+  text-align:left;
+  border:1px solid transparent;
+  background:transparent;
+  color:#82909d;
+  padding:0 9px;
+  font:850 8px ui-monospace;
+  letter-spacing:.05em;
+  cursor:pointer;
+}
+.settings-tab:hover{
+  color:#dce5ed;
+  background:#0d1217;
+}
+.settings-tab.active{
+  color:#eaf7ff;
+  background:#0e1a22;
+  border-color:#365a6c;
+  box-shadow:inset 2px 0 0 #66d8ff;
+}
+.settings-content{
+  min-height:0;
+  overflow:auto;
+  padding:15px 18px 28px;
+}
+.settings-pane{display:none}
+.settings-pane.active{display:block}
+.settings-pane h2{
+  margin:0 0 5px;
+  font:1000 14px ui-monospace;
+  letter-spacing:.07em;
+}
+.settings-desc{
+  margin:0 0 16px;
+  color:#6d7a87;
+  font:700 8px/1.55 ui-monospace;
+}
+.settings-group{
+  margin-bottom:14px;
+  border:1px solid #242c34;
+  background:#0b0f14;
+}
+.settings-group-title{
+  height:30px;
+  display:flex;
+  align-items:center;
+  padding:0 10px;
+  border-bottom:1px solid #242c34;
+  color:#8f9da9;
+  font:900 8px ui-monospace;
+  letter-spacing:.09em;
+}
+.setting-row{
+  min-height:48px;
+  display:grid;
+  grid-template-columns:minmax(190px,.9fr) minmax(220px,1.1fr);
+  align-items:center;
+  gap:18px;
+  padding:8px 10px;
+  border-bottom:1px solid #1b2229;
+}
+.setting-row:last-child{border-bottom:0}
+.setting-name{
+  font:850 9px ui-monospace;
+  color:#cbd5de;
+}
+.setting-help{
+  margin-top:4px;
+  font:650 7px/1.45 ui-monospace;
+  color:#65727e;
+}
+.setting-control{
+  display:flex;
+  justify-content:flex-end;
+  align-items:center;
+  gap:7px;
+  min-width:0;
+}
+.setting-control select,
+.setting-control input[type="text"]{
+  height:28px;
+  min-width:180px;
+  border:1px solid #35414d;
+  background:#0d141a;
+  color:#dce6ee;
+  padding:0 7px;
+  font:800 8px ui-monospace;
+  outline:none;
+}
+.setting-control input[type="range"]{
+  width:min(240px,100%);
+  accent-color:#72d9ff;
+}
+.settings-toggle{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  color:#b9c4ce;
+  font:800 8px ui-monospace;
+}
+.settings-toggle input{accent-color:#72d9ff}
+.settings-action{
+  height:28px;
+  border:1px solid #40505d;
+  background:#111820;
+  color:#dce7f0;
+  padding:0 10px;
+  font:900 8px ui-monospace;
+  cursor:pointer;
+}
+.settings-action:hover{border-color:#71869a}
+.settings-action.primary{
+  border-color:#4d7a90;
+  background:#10202a;
+  color:#e0f7ff;
+}
+.settings-action.warn{
+  border-color:#765a32;
+  color:#f6d69a;
+}
+.settings-action.danger{
+  border-color:#754148;
+  color:#ffc2c7;
+}
+.settings-value{
+  font:850 8px ui-monospace;
+  color:#9fb0bd;
+  text-align:right;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.settings-value.good{color:#62dc91}
+.settings-value.warn{color:#e4bb69}
+.settings-value.err{color:#ff737a}
+.settings-foot{
+  grid-column:1 / -1;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:0 12px;
+  border-top:1px solid #29313a;
+  background:#090d11;
+}
+.settings-foot-note{
+  font:700 8px ui-monospace;
+  color:#64717d;
+}
+.settings-foot-spacer{flex:1}
+.settings-radio-volume{
+  min-width:38px;
+  text-align:right;
+  font:850 8px ui-monospace;
+  color:#a7b5c1;
+}
+.settings-readonly{
+  min-height:28px;
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  color:#83919d;
+  font:800 8px/1.4 ui-monospace;
+}
+body.cinema-mode .settings-overlay{display:none!important}
+
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">SIGNAL</div>
+  <div class="ver">DESKTOP / v1.0.0</div>
+  <div class="live"><i class="dot"></i> MULTI-LIVE</div>
+  <div class="spacer"></div>
+  <div class="health-summary" id="healthSummary">
+    <span class="health-live">LIVE <b id="healthLive">0</b></span>
+    <span class="health-buffer">BUF <b id="healthBuffer">0</b></span>
+    <span class="health-recover">REC <b id="healthRecover">0</b></span>
+    <span class="health-offline">OFF <b id="healthOffline">0</b></span>
+  </div>
+  <div class="mode-readout" id="modeReadout">MANUAL</div>
+  <div class="top-status" id="emergencyTopStatus" title="Japan Emergency Watch status">
+    <span class="top-status-dot"></span>
+    <span id="emergencyTopText">JP EMG STARTING</span>
+  </div>
+  <div class="utc" id="utc">UTC --:--:--</div>
+</header>
+
+<nav class="modebar">
+  <div class="modebar-main">
+    <span class="mode-label">PRESET</span>
+    <select class="preset-select" id="presetSelect">
+      <option value="global">GLOBAL</option>
+      <option value="asia">ASIA</option>
+      <option value="europe">EUROPE</option>
+      <option value="americas">AMERICAS</option>
+      <option value="japan">JAPAN</option>
+      <option value="custom">CUSTOM</option>
+      <option value="emergency" disabled>JAPAN EMERGENCY</option>
+    </select>
+
+    <span class="mode-sep"></span>
+
+    <button class="tool-btn" id="settingsBtn">SETTINGS</button>
+    <button class="tool-btn" id="cinemaBtn">CINEMA</button>
+    <button class="tool-btn" id="headlinesBtn">HEADLINES</button>
+    <button class="tool-btn alert-btn active" id="alertsBtn">ALERTS</button>
+    <button class="tool-btn" id="radioBtn">RADIO</button>
+  </div>
+
+  <div class="modebar-spacer"></div>
+
+  <div class="top-status" title="Current monitoring mode">
+    <span class="top-status-dot"></span>
+    <span>MODE <strong id="minimalModeStatus">MANUAL</strong></span>
+  </div>
+</nav>
+
+<!--
+  Compatibility controls remain in the DOM but are intentionally hidden.
+  SETTINGS is now the only configuration surface for these values.
+  Existing monitoring code continues to use the same control IDs.
+-->
+<div class="control-proxies" aria-hidden="true">
+  <button id="sourceManagerBtn"></button>
+  <span id="layoutReadout">4×3</span>
+
+  <button data-mode="manual"></button>
+  <button data-mode="multi"></button>
+  <button data-mode="scan"></button>
+  <button data-mode="newsroom"></button>
+
+  <select id="intervalSelect">
+    <option value="10">10</option>
+    <option value="20">20</option>
+    <option value="30" selected>30</option>
+    <option value="60">60</option>
+  </select>
+  <input type="checkbox" id="followAudio" checked>
+  <button id="mixerBtn"><span id="mixCount">0/3</span></button>
+  <button id="scanNowBtn"></button>
+  <span id="countdown">NEXT --:--</span>
+
+  <input type="checkbox" id="autoRecover" checked>
+  <button id="reconnectAllBtn"></button>
+
+  <button id="emergencyWatchBtn"></button>
+  <select id="emergencySourceSelect">
+    <option value="live">LIVE</option>
+    <option value="sandbox">SANDBOX</option>
+  </select>
+  <button id="emergencyDemoBtn"></button>
+  <span id="emergencyConn">CONNECTING</span>
+
+  <select id="cleanFeedSelect">
+    <option value="standard">STANDARD</option>
+    <option value="strict">STRICT</option>
+    <option value="off">OFF</option>
+  </select>
+  <span id="cleanEngine">LOADING</span>
+  <strong id="blockedCount">0</strong>
+</div>
+
+<section class="emergency-banner" id="emergencyBanner">
+  <span class="emergency-kicker" id="emergencyKicker">JAPAN EMERGENCY</span>
+  <span class="emergency-region" id="emergencyRegion">JAPAN</span>
+  <div class="emergency-main">
+    <div class="emergency-title" id="emergencyTitle">—</div>
+    <div class="emergency-detail" id="emergencyDetail">—</div>
+  </div>
+  <div class="emergency-source">
+    <div id="emergencyIssued">—</div>
+    <div>REFERENCE ONLY / OFFICIAL ALERTS TAKE PRIORITY</div>
+  </div>
+  <button class="emergency-return" id="emergencyReturnBtn">RETURN</button>
+</section>
+
+<section class="clocks" id="clocks"></section>
+<main class="grid" id="grid"></main>
+
+<aside class="mixer" id="mixer">
+  <div class="mixer-head">
+    <div class="mixer-title">AUDIO MIXER</div>
+    <div class="mixer-mode" id="mixerMode">MANUAL</div>
+    <button class="mixer-close" id="mixerClose">×</button>
+  </div>
+  <div class="mixer-list" id="mixerList"></div>
+  <div class="mixer-note">
+    MULTI AUDIO: 最大3局。NEWSROOM: LEAD 60% + BACKGROUND 20% + 20% を自動生成。
+  </div>
+</aside>
+
+
+
+
+
+<div class="alert-strip" id="alertStrip">
+  <span class="alert-strip-label">BREAKING SIGNAL</span>
+  <span class="alert-strip-region" id="alertStripRegion">GLOBAL</span>
+  <span class="alert-strip-topic" id="alertStripTopic">—</span>
+  <span class="alert-strip-meta" id="alertStripMeta"></span>
+  <button class="alert-strip-close" id="alertStripClose">×</button>
+</div>
+
+
+<aside class="alert-panel" id="alertPanel">
+  <div class="alert-head">
+    <div class="alert-title">BREAKING / ALERT</div>
+    <div class="alert-sub">RULE-BASED / NO AI</div>
+    <button class="alert-close" id="alertPanelClose">×</button>
+  </div>
+  <div class="alert-info">
+    <span>REGION <strong id="alertRegionLabel">GLOBAL</strong></span>
+    <span>THRESHOLD <strong>4 SOURCES</strong></span>
+    <span id="alertScanTime">WAITING</span>
+  </div>
+  <div class="alert-list" id="alertList">
+    <div class="alert-empty">NO ALERTS DETECTED</div>
+  </div>
+  <div class="alert-foot">
+    <span>HEADLINES PATTERN DETECTOR</span>
+    <span class="alert-foot-state" id="alertFootState">READY</span>
+  </div>
+</aside>
+
+<aside class="radio-panel" id="radioPanel">
+  <div class="radio-head">
+    <div class="radio-title">RADIO MONITOR</div>
+    <div class="radio-source">RADIO BROWSER / DIRECT STREAM</div>
+    <button class="radio-close" id="radioClose">×</button>
+  </div>
+
+  <div class="radio-quick">
+    <button class="radio-chip" data-radio-query="BBC World Service">BBC WORLD</button>
+    <button class="radio-chip" data-radio-query="NHK">NHK</button>
+    <button class="radio-chip" data-radio-query="RFI">RFI</button>
+    <button class="radio-chip" data-radio-query="ABC Radio National">ABC RADIO</button>
+    <button class="radio-chip" data-radio-query="CBC Radio">CBC RADIO</button>
+    <button class="radio-chip" data-radio-query="NPR">NPR</button>
+  </div>
+
+  <div class="radio-search">
+    <input id="radioSearchInput" value="BBC World Service" placeholder="Search station name">
+    <button id="radioSearchBtn">SEARCH</button>
+  </div>
+
+  <div class="radio-results" id="radioResults">
+    <div class="radio-empty">SEARCH FOR A RADIO STATION</div>
+  </div>
+
+  <div class="radio-bottom">
+    <div class="radio-player">
+      <span class="radio-status-dot" id="radioStatusDot"></span>
+      <div>
+        <div class="radio-now-name" id="radioNowName">NO RADIO SELECTED</div>
+        <div class="radio-now-meta" id="radioNowMeta">Independent from video audio</div>
+      </div>
+      <span class="radio-state" id="radioState">STOPPED</span>
+    </div>
+
+    <div class="radio-controls">
+      <button id="radioToggleBtn">PLAY</button>
+      <button id="radioStopBtn">STOP</button>
+      <span class="mode-label">VOL</span>
+      <input type="range" id="radioVolume" min="0" max="100" value="45">
+      <span class="radio-volume" id="radioVolumeReadout">45%</span>
+    </div>
+
+    <div class="radio-direct-label">DIRECT STREAM — use this if the public directory is unavailable</div>
+    <div class="radio-direct">
+      <input id="radioDirectName" placeholder="Station name">
+      <input id="radioDirectUrl" placeholder="https://.../stream.mp3">
+      <button id="radioDirectPlay">PLAY URL</button>
+    </div>
+  </div>
+</aside>
+
+<audio id="radioAudio" preload="none"></audio>
+
+<aside class="headlines-panel" id="headlinesPanel">
+  <div class="headlines-head">
+    <div class="headlines-title">HEADLINES</div>
+    <div class="headlines-source" id="headlineProvider">GDELT → RSS FALLBACK</div>
+    <button class="headlines-close" id="headlinesClose">×</button>
+  </div>
+  <div class="headlines-tools">
+    <span class="mode-label">REGION</span>
+    <span class="headlines-region" id="headlineRegionLabel">GLOBAL</span>
+    <button class="headlines-refresh" id="headlinesRefresh">REFRESH</button>
+  </div>
+  <div class="headlines-list" id="headlinesList">
+    <div class="mix-empty">HEADLINES NOT LOADED</div>
+  </div>
+  <div class="headlines-foot">
+    <span>API KEY: NOT REQUIRED</span>
+    <span class="headlines-state" id="headlinesState">IDLE</span>
+  </div>
+</aside>
+
+
+<div class="settings-overlay" id="settingsOverlay">
+  <div class="settings-shell">
+    <div class="settings-head">
+      <div class="settings-title">SIGNAL SETTINGS</div>
+      <div class="settings-version">v1.0 / LOCAL CONFIGURATION</div>
+      <button class="settings-close" id="settingsClose">×</button>
+    </div>
+
+    <nav class="settings-tabs" id="settingsTabs">
+      <button class="settings-tab active" data-settings-tab="general">GENERAL</button>
+      <button class="settings-tab" data-settings-tab="display">DISPLAY</button>
+      <button class="settings-tab" data-settings-tab="sources">SOURCES</button>
+      <button class="settings-tab" data-settings-tab="audio">AUDIO</button>
+      <button class="settings-tab" data-settings-tab="headlines">HEADLINES & ALERTS</button>
+      <button class="settings-tab" data-settings-tab="radio">RADIO</button>
+      <button class="settings-tab" data-settings-tab="emergency">JAPAN EMERGENCY</button>
+      <button class="settings-tab" data-settings-tab="clean">CLEAN FEED</button>
+      <button class="settings-tab" data-settings-tab="recovery">RECOVERY</button>
+    </nav>
+
+    <main class="settings-content">
+      <section class="settings-pane active" data-settings-pane="general">
+        <h2>GENERAL</h2>
+        <p class="settings-desc">通常監視の基本動作。変更は即時保存され、次回起動時に復元されます。</p>
+
+        <div class="settings-group">
+          <div class="settings-group-title">MONITORING</div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-name">Monitoring mode</div>
+              <div class="setting-help">MANUAL / MULTI AUDIO / SCAN / NEWSROOM</div>
+            </div>
+            <div class="setting-control">
+              <select id="settingMode">
+                <option value="manual">MANUAL</option>
+                <option value="multi">MULTI AUDIO</option>
+                <option value="scan">SCAN</option>
+                <option value="newsroom">NEWSROOM</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div>
+              <div class="setting-name">Scan / Newsroom interval</div>
+              <div class="setting-help">自動切替の間隔。</div>
+            </div>
+            <div class="setting-control">
+              <select id="settingInterval">
+                <option value="10">10 SEC</option>
+                <option value="20">20 SEC</option>
+                <option value="30">30 SEC</option>
+                <option value="60">60 SEC</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div>
+              <div class="setting-name">Current preset</div>
+              <div class="setting-help">変更すると監視ソースを再構築します。</div>
+            </div>
+            <div class="setting-control">
+              <select id="settingPreset">
+                <option value="global">GLOBAL</option>
+                <option value="asia">ASIA</option>
+                <option value="europe">EUROPE</option>
+                <option value="americas">AMERICAS</option>
+                <option value="japan">JAPAN</option>
+                <option value="custom">CUSTOM</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="settings-pane" data-settings-pane="display">
+        <h2>DISPLAY</h2>
+        <p class="settings-desc">映像比率16:9は常時固定です。CINEMAでは監視に不要なUIだけを隠します。</p>
+
+        <div class="settings-group">
+          <div class="settings-group-title">MONITOR WALL</div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-name">Aspect ratio</div>
+              <div class="setting-help">映像を引き伸ばさず、元映像全体を表示。</div>
+            </div>
+            <div class="settings-readonly">16:9 LOCK / ALWAYS ON</div>
+          </div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-name">Current adaptive grid</div>
+              <div class="setting-help">現在の局数と画面サイズから自動計算。</div>
+            </div>
+            <div class="settings-value" id="settingGridValue">AUTO</div>
+          </div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-name">Cinema mode</div>
+              <div class="setting-help">映像・時計・ticker・緊急情報中心の全画面監視。</div>
+            </div>
+            <div class="setting-control">
+              <button class="settings-action primary" id="settingCinemaBtn">ENTER CINEMA</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="settings-pane" data-settings-pane="sources">
+        <h2>SOURCES</h2>
+        <p class="settings-desc">ニュース局とCUSTOMプリセットの編集はSOURCE MANAGERへ集約しています。</p>
+
+        <div class="settings-group">
+          <div class="settings-group-title">SOURCE CONFIGURATION</div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-name">Active source set</div>
+              <div class="setting-help">現在SIGNALがロードしている映像ソース。</div>
+            </div>
+            <div class="settings-value" id="settingSourceCount">—</div>
+          </div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-name">Source Manager</div>
+              <div class="setting-help">12スロット編集・YouTube LIVE追加・CUSTOM保存。</div>
+            </div>
+            <div class="setting-control">
+              <button class="settings-action primary" id="settingOpenSources">OPEN SOURCE MANAGER</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="settings-pane" data-settings-pane="audio">
+        <h2>AUDIO</h2>
+        <p class="settings-desc">映像音声とRADIOは独立しています。MULTI AUDIOは最大3ソースです。</p>
+
+        <div class="settings-group">
+          <div class="settings-group-title">VIDEO AUDIO</div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-name">Follow audio in SCAN</div>
+              <div class="setting-help">SCANで選択された局へ音声を追従。</div>
+            </div>
+            <div class="setting-control">
+              <label class="settings-toggle">
+                <input type="checkbox" id="settingFollowAudio"> ENABLED
+              </label>
+            </div>
+          </div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-name">Audio Mixer</div>
+              <div class="setting-help">MULTI AUDIO / NEWSROOMの個別音量を調整。</div>
+            </div>
+            <div class="setting-control">
+              <button class="settings-action" id="settingOpenMixer">OPEN MIXER</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <div class="settings-group-title">RADIO VOLUME</div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-name">Default / current radio volume</div>
+              <div class="setting-help">最後の値をPC内に保存します。</div>
+            </div>
+            <div class="setting-control">
+              <input type="range" id="settingRadioVolume" min="0" max="100" value="45">
+              <span class="settings-radio-volume" id="settingRadioVolumeValue">45%</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="settings-pane" data-settings-pane="headlines">
+        <h2>HEADLINES & ALERTS</h2>
+        <p class="settings-desc">HEADLINESは現在の地域PRESETだけを取得し、BREAKING SIGNALも同じ地域だけを解析します。</p>
+
+        <div class="settings-group">
+          <div class="settings-group-title">HEADLINES</div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-name">Region</div>
+              <div class="setting-help">PRESETと自動同期。</div>
+            </div>
+            <div class="settings-value" id="settingHeadlineRegion">—</div>
+          </div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-name">Provider / status</div>
+              <div class="setting-help">GDELT → Google News RSS → local cache の順にフォールバック。</div>
+            </div>
+            <div class="settings-value" id="settingHeadlineStatus">—</div>
+          </div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-name">Refresh now</div>
+              <div class="setting-help">通常は5分ごとにバックグラウンド更新。</div>
+            </div>
+            <div class="setting-control">
+              <button class="settings-action" id="settingRefreshHeadlines">REFRESH</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <div class="settings-group-title">BREAKING / ALERT</div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-name">Rule-based alert monitor</div>
+              <div class="setting-help">AIなし。複数媒体で同じ語句が増加したときだけSIGNALを表示。</div>
+            </div>
+            <div class="setting-control">
+              <label class="settings-toggle">
+                <input type="checkbox" id="settingAlerts"> ENABLED
+              </label>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="settings-pane" data-settings-pane="radio">
+        <h2>RADIO</h2>
+        <p class="settings-desc">Radio Browser検索とDIRECT STREAMはRADIO MONITORで操作します。</p>
+
+        <div class="settings-group">
+          <div class="settings-group-title">RADIO MONITOR</div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-name">Current station</div>
+              <div class="setting-help">起動時の自動再生は行いません。</div>
+            </div>
+            <div class="settings-value" id="settingRadioStation">NO RADIO SELECTED</div>
+          </div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-name">Radio Monitor</div>
+              <div class="setting-help">局検索・DIRECT STREAM・再接続状態を確認。</div>
+            </div>
+            <div class="setting-control">
+              <button class="settings-action primary" id="settingOpenRadio">OPEN RADIO</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="settings-pane" data-settings-pane="emergency">
+        <h2>JAPAN EMERGENCY</h2>
+        <p class="settings-desc">P2P地震情報を補助トリガーとして使い、日本のニュース4局へ自動切替します。公式警報を常に優先してください。</p>
+
+        <div class="settings-group">
+          <div class="settings-group-title">WATCH</div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-name">Japan Emergency Watch</div>
+              <div class="setting-help">EEW警報・津波警報・震度5弱以上を監視。</div>
+            </div>
+            <div class="setting-control">
+              <label class="settings-toggle">
+                <input type="checkbox" id="settingEmergencyEnabled"> ENABLED
+              </label>
+            </div>
+          </div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-name">Data source</div>
+              <div class="setting-help">通常はLIVE。SANDBOXは公式テスト環境。</div>
+            </div>
+            <div class="setting-control">
+              <select id="settingEmergencySource">
+                <option value="live">LIVE</option>
+                <option value="sandbox">SANDBOX</option>
+              </select>
+            </div>
+          </div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-name">Connection</div>
+              <div class="setting-help">WebSocket監視の現在状態。</div>
+            </div>
+            <div class="settings-value" id="settingEmergencyStatus">—</div>
+          </div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-name">Emergency demo</div>
+              <div class="setting-help">実データを待たず、JAPAN EMERGENCYへの映像切替をテスト。</div>
+            </div>
+            <div class="setting-control">
+              <button class="settings-action warn" id="settingEmergencyDemo">RUN DEMO</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="settings-pane" data-settings-pane="clean">
+        <h2>CLEAN FEED</h2>
+        <p class="settings-desc">Ghostery/EasyList互換エンジン。起動前に有効化し、エンジンをローカルキャッシュします。</p>
+
+        <div class="settings-group">
+          <div class="settings-group-title">FILTERING</div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-name">Clean Feed mode</div>
+              <div class="setting-help">STANDARD推奨。STRICTは広告・trackerをより広く遮断。</div>
+            </div>
+            <div class="setting-control">
+              <select id="settingCleanMode">
+                <option value="standard">STANDARD</option>
+                <option value="strict">STRICT</option>
+                <option value="off">OFF</option>
+              </select>
+            </div>
+          </div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-name">Engine</div>
+              <div class="setting-help">STRICTで複数局が停止するとSTANDARDへ自動フォールバック。</div>
+            </div>
+            <div class="settings-value" id="settingCleanStatus">—</div>
+          </div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-name">Blocked requests</div>
+              <div class="setting-help">起動後に遮断した広告・tracker系通信の概算。</div>
+            </div>
+            <div class="settings-value" id="settingBlockedCount">0</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="settings-pane" data-settings-pane="recovery">
+        <h2>RECOVERY</h2>
+        <p class="settings-desc">長時間監視で停止・切断したLIVEを検知して復旧します。</p>
+
+        <div class="settings-group">
+          <div class="settings-group-title">WATCHDOG</div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-name">Auto Recover</div>
+              <div class="setting-help">STALLED / OFFLINE局を自動再接続。</div>
+            </div>
+            <div class="setting-control">
+              <label class="settings-toggle">
+                <input type="checkbox" id="settingAutoRecover"> ENABLED
+              </label>
+            </div>
+          </div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-name">Recovery schedule</div>
+              <div class="setting-help">安定性優先の固定値。</div>
+            </div>
+            <div class="settings-readonly">1s → 5s → 15s → 60s</div>
+          </div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-name">Source health</div>
+              <div class="setting-help">現在のLIVE / BUFFERING / RECOVERING / OFFLINE。</div>
+            </div>
+            <div class="settings-value" id="settingHealthStatus">—</div>
+          </div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-name">Reconnect all</div>
+              <div class="setting-help">全ニュースWebViewを手動で再接続。</div>
+            </div>
+            <div class="setting-control">
+              <button class="settings-action" id="settingReconnectAll">RECONNECT ALL</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div class="settings-foot">
+      <span class="settings-foot-note">Settings are stored locally on this PC.</span>
+      <div class="settings-foot-spacer"></div>
+      <button class="settings-action danger" id="settingsReset">RESET APP SETTINGS</button>
+      <button class="settings-action primary" id="settingsDone">DONE</button>
+    </div>
+  </div>
+</div>
+
+<div class="source-manager" id="sourceManager">
+  <div class="manager-panel">
+    <div class="manager-head">
+      <div class="manager-title">SOURCE MANAGER</div>
+      <div class="manager-sub">12 SLOT CONFIGURATION / LOCAL STORAGE</div>
+      <button class="manager-close" id="sourceManagerClose">×</button>
+    </div>
+
+    <div class="manager-body">
+      <section class="manager-section">
+        <div class="manager-section-head">MONITOR SLOTS</div>
+        <div class="slot-list" id="slotList"></div>
+        <div class="preset-note">
+          SAVE AS CUSTOMで現在の12スロットを保存します。空きスロットも設定できます。
+        </div>
+      </section>
+
+      <section class="manager-section">
+        <div class="manager-section-head">ADD CUSTOM SOURCE</div>
+        <div class="custom-form">
+          <label>STATION NAME
+            <input id="customName" placeholder="Example News Live">
+          </label>
+          <label>YOUTUBE LIVE / CHANNEL URL
+            <input id="customUrl" placeholder="https://www.youtube.com/@channel/live">
+          </label>
+          <label>OFFICIAL URL
+            <input id="customOfficial" placeholder="https://example.com/live">
+          </label>
+          <div class="custom-grid">
+            <label>COUNTRY
+              <input id="customCountry" placeholder="JAPAN">
+            </label>
+            <label>CITY
+              <input id="customCity" placeholder="TOKYO">
+            </label>
+          </div>
+          <div class="custom-grid">
+            <label>TIMEZONE
+              <input id="customTz" value="Asia/Tokyo" placeholder="Asia/Tokyo">
+            </label>
+            <label>FLAG / LABEL
+              <input id="customFlag" value="📡" placeholder="📡">
+            </label>
+          </div>
+          <button class="manager-btn primary" id="addCustomSourceBtn">ADD TO SOURCE LIBRARY</button>
+        </div>
+        <div class="manager-section-head">CUSTOM LIBRARY</div>
+        <div class="custom-list" id="customSourceList"></div>
+      </section>
+    </div>
+
+    <div class="manager-foot">
+      <span class="manager-foot-note" id="managerPresetLabel">ACTIVE: GLOBAL</span>
+      <div class="spacer"></div>
+      <button class="manager-btn" id="resetCustomBtn">RESET CUSTOM</button>
+      <button class="manager-btn primary" id="saveCustomLayoutBtn">SAVE AS CUSTOM</button>
+    </div>
+  </div>
+</div>
+
+
+<button class="cinema-exit" id="cinemaExitBtn">EXIT CINEMA · F11</button>
+
+<div class="toast" id="toast"></div>
+
+<footer>
+  <div class="ticker-tag">GLOBAL FEED</div>
+  <div class="ticker"><div class="ticker-inner" id="ticker">
+    <span><b>SIGNAL</b> v1.0.0 CACHED CLEAN FEED / STABLE STARTUP</span>
+    <span><b>MULTI AUDIO</b> UP TO THREE SOURCES WITH INDIVIDUAL VOLUME</span>
+    <span><b>SCAN</b> RANDOMLY ROTATES ONLINE SOURCES</span>
+    <span><b>NEWSROOM</b> ONE LEAD + TWO BACKGROUND AUDIO SOURCES</span>
+  </div></div>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>

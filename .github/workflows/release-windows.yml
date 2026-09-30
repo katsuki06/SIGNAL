@@ -1,0 +1,90 @@
+name: Build & Publish SIGNAL 1.0.0
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Verify toolchain
+        shell: pwsh
+        run: |
+          npx electron --version
+          npx electron-builder --version
+
+      - name: Build Windows installer and portable app
+        run: npm run dist:win
+
+      - name: Prepare release assets
+        shell: pwsh
+        run: |
+          $releaseDir = "release-assets"
+          New-Item -ItemType Directory -Force -Path $releaseDir | Out-Null
+
+          Copy-Item "dist/SIGNAL Setup 1.0.0.exe" "$releaseDir/SIGNAL Setup 1.0.0.exe"
+          Copy-Item "dist/SIGNAL Portable 1.0.0.exe" "$releaseDir/SIGNAL Portable 1.0.0.exe"
+          Copy-Item "THIRD_PARTY_NOTICES.txt" "$releaseDir/THIRD_PARTY_NOTICES.txt"
+          Copy-Item "DISTRIBUTION_README.txt" "$releaseDir/README.txt"
+
+          $targets = @(
+            "$releaseDir/SIGNAL Setup 1.0.0.exe",
+            "$releaseDir/SIGNAL Portable 1.0.0.exe"
+          )
+
+          $lines = foreach ($target in $targets) {
+            $hash = Get-FileHash -Path $target -Algorithm SHA256
+            "{0}  {1}" -f $hash.Hash.ToLower(), (Split-Path $target -Leaf)
+          }
+
+          $lines | Set-Content "$releaseDir/SHA256SUMS.txt" -Encoding ASCII
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SIGNAL-1.0.0-Windows
+          path: release-assets/*
+          if-no-files-found: error
+
+      - name: Publish GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "v1.0.0"
+          $assets = @(
+            "release-assets/SIGNAL Setup 1.0.0.exe",
+            "release-assets/SIGNAL Portable 1.0.0.exe",
+            "release-assets/SHA256SUMS.txt",
+            "release-assets/README.txt",
+            "release-assets/THIRD_PARTY_NOTICES.txt"
+          )
+
+          gh release view $tag *> $null
+
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "Release exists; replacing release assets."
+            gh release upload $tag @assets --clobber
+          }
+          else {
+            Write-Host "Creating SIGNAL 1.0.0 release."
+            gh release create $tag @assets `
+              --title "SIGNAL 1.0.0" `
+              --notes-file "RELEASE_NOTES.md" `
+              --target "${{ github.sha }}"
+          }
